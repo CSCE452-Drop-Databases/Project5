@@ -27,6 +27,6 @@ int LineSegment::get_x() {
 }
 
 std::ostream& operator<<(std::ostream& os, const LineSegment& obj) {
-	os << "(" << obj.start << ")->(" << obj.end << ")";
+	os << "(" << obj.start << ") -> (" << obj.end << ")";
 	return os;
 }

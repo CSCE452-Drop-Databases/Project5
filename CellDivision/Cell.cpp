@@ -39,3 +39,19 @@ int Cell::calcSize(vector<LineSegment> _segs, vector<Obstacle> _obs, int _x_max)
 	
 	return size;
 }
+
+vector<Point> Cell::get_points() {
+	vector<Point> result_points;
+	if (size == 1) {
+		result_points.push_back(left_edge.start);
+		result_points.push_back(left_edge.end);
+	} else if (size > 1) {
+		result_points.push_back({left_edge.y_max(), left_edge.get_x()});
+		result_points.push_back({ left_edge.y_max(), left_edge.get_x() + size - 1});
+		result_points.push_back({ left_edge.y_min(), left_edge.get_x() + size - 1 });
+		result_points.push_back({ left_edge.y_min(), left_edge.get_x() });
+	} else {
+		cerr << "Error: size less than 1 in calcSize" << endl;
+	}
+	return result_points;
+}
