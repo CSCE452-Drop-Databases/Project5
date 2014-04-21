@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "Obstacle.h"
 #include "LineSegment.h"
+#include "Cell.h"
 #include <GL/glut.h>
 
 using namespace std;
@@ -11,10 +12,9 @@ using namespace std;
 #define WINDOW_WIDTH 500
 #define WINDOW_HEIGHT 500
 
-//TODO somewhere, check for overlapping corners, and account for them
-
 vector<Obstacle> obstacles;
 vector<LineSegment> cell_divisions;
+vector<Cell> cells;
 
 void addGLVertex(Point _point) {
 	glVertex2i(_point.x, _point.y);
@@ -39,14 +39,15 @@ void drawSegment(LineSegment _seg) {
 	glFlush();
 }
 
-void makeCells() {
-	//Point topleft_start = { -1, -1 };
+void makeDivisions() {
 	for (int i = 0; i < obstacles.size(); i++) {
+		//Make 5 division lines using the obstacle's borders
+		//Note: not all proto_segs will be used, such as when corners overlap
 		vector<LineSegment> proto_segs;
 		
 		Point topleft_start = obstacles[i].locate_corner(0);
 		topleft_start.y += 1;
-		LineSegment seg0(topleft_start, {topleft_start.x, 500});
+		LineSegment seg0(topleft_start, { topleft_start.x, WINDOW_HEIGHT });
 		proto_segs.push_back(seg0);
 
 		Point bottomleft_start = obstacles[i].locate_corner(3);
@@ -57,7 +58,7 @@ void makeCells() {
 		Point topright_start = obstacles[i].locate_corner(1);
 		topright_start.y += 1;
 		topright_start.x += 1;
-		LineSegment seg1(topright_start, { topright_start.x, 500 });
+		LineSegment seg1(topright_start, { topright_start.x, WINDOW_HEIGHT });
 		proto_segs.push_back(seg1);
 
 		Point bottomright_start = obstacles[i].locate_corner(2);
@@ -86,28 +87,21 @@ void makeCells() {
 				cell_divisions.push_back(proto_segs[j]);
 			}
 		}
-
-		//TODO clip line foreach obstacle
-		/*
-		int clip_result = 0;
-		for (int k = 0; k < obstacles.size(); k++) {
-			clip_result = obstacles[k].clipLineSegment(seg0);
-			if (clip_result == 1) {
-				//overlapping corner
-				break;
-			}
-		}
-		if (clip_result != 1) {
-			cell_divisions.push_back(seg0);
-		}
-		*/
 	}
 
 }
 
+void makeCells() {
+	for (int i = 0; i < cell_divisions.size(); i++) {
+		cells.push_back(Cell(cell_divisions[i]));
+	}
+	for (int i = 0; i < cells.size(); i++) {
+		cells[i].calcSize(cell_divisions, obstacles, WINDOW_WIDTH);
+	}
+}
+
 void display(void) {
 	//draw stuff
-	//cout << "display called" << endl;
 	glClear(GL_COLOR_BUFFER_BIT);
 	for (int i = 0; i < obstacles.size(); i++) {
 		drawObstacle(obstacles[i]);
@@ -142,6 +136,7 @@ void init(void) {
 	glFlush();
 	printf("Screen cleared.\n");
 
+	makeDivisions();
 	makeCells();
 }
 

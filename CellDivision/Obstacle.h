@@ -43,11 +43,9 @@ public:
 	int y_min();
 	int y_max();
 	
-	//Is this obstacle in the way of the line starting
-	//at the given point? bool is false is the line travels
-	//in the negative y direction, true if positive y direction.
-	//Returns -1, -1 if there is no intersection
+	//Deprecated
 	Point check_intersection(Point _line_start, bool _travels_positive);
 
+	//If the given segment collides with this obstacle, the segment is clipped
 	int clipLineSegment(LineSegment& _segment);
 };

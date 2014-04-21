@@ -10,6 +10,10 @@ struct LineSegment {
 	LineSegment();
 
 	LineSegment(Point _start, Point _end);
+
+	int y_max();
+	int y_min();
+	int get_x();
 };
 
 

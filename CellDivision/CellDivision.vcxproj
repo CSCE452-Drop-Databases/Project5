@@ -79,6 +79,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Cell.h" />
     <ClInclude Include="LineSegment.h" />
     <ClInclude Include="Obstacle.h" />
     <ClInclude Include="Point.h" />
@@ -86,6 +87,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Cell.cpp" />
     <ClCompile Include="CellDivision.cpp" />
     <ClCompile Include="LineSegment.cpp" />
     <ClCompile Include="Obstacle.cpp" />

@@ -100,24 +100,14 @@ Point Obstacle::check_intersection(Point _line_start, bool _travels_positive) {
 }
 
 int Obstacle::clipLineSegment(LineSegment& _s) {
-	/*
-	for (int i = 0; i < 4; i++) {
-		if (_segment.start == corners[i].get_location()) {
-			cerr << "Error: exact same corners in clipLineSegment" << endl;
-			return 1;
-		}
-	}
-	*/
-
 	//case where start is inside obstacle, and we should throw out the line entirely
 	if ((_s.start.x >= this->x_min())
 		&& (_s.start.x <= this->x_max())
 		&& (_s.start.y >= this->y_min())
 		&& (_s.start.y <= this->y_max())) {
-		cerr << "Warning: segment starts inside obstacle in clipLineSegment." << endl;
+		//cerr << "Warning: segment starts inside obstacle in clipLineSegment." << endl;
 		return 1;
 	}
-
 
 	//is line moving up or down?
 	bool travels_positive;
@@ -130,41 +120,42 @@ int Obstacle::clipLineSegment(LineSegment& _s) {
 	} else {
 		//start and end have the same y value, therefore
 		//segment is 1 pixel in length and cannot be clipped further
-		cout << "segment of length 1" << endl;
+		//cout << "segment of length 1" << endl;
 		return 2;
 	}
 
+	//Many cases where the line would not collide
 	if (_s.start.x < this->x_min() || _s.start.x > this->x_max()) {
 		//case where line's x is outside obstacle
-		cout << "line's x is outside obstacle" << endl;
+		//cout << "line's x is outside obstacle" << endl;
 		return 3;
 	} else if (_s.start.y > this->y_max() && travels_positive) {
 		//case where line starts above obstacle and moves up
-		cout << "line starts above obstacle and moves up" << endl;
+		//cout << "line starts above obstacle and moves up" << endl;
 		return 4;
 	} else if (_s.start.y < this->y_min() && !(travels_positive)) {
 		//case where line starts below obstacle and moves down
-		cout << "line starts below obstacle and moves down" << endl;
+		//cout << "line starts below obstacle and moves down" << endl;
 		return 5;
 	} else if (_s.end.y < this->y_min() && travels_positive) {
 		//case where line ends below obstacle and moves up
-		cout << "line ends below obstacle and moves up" << endl;
+		//cout << "line ends below obstacle and moves up" << endl;
 		return 6;
 	} else if (_s.end.y > this->y_max() && !(travels_positive)) {
 		//case where line ends above obstacle and moves down
-		cout << "line ends above obstacle and moves down" << endl;
+		//cout << "line ends above obstacle and moves down" << endl;
 		return 7;
 	} else if (travels_positive) {
 		//if none of the previous cases happen, the line collides with the obstacle
 		//case where line collides obstacles from below
 		_s.end.y = this->y_min();
-		cout << "line collides obstacles from below" << endl;
+		//cout << "line collides obstacles from below" << endl;
 
 		return 0;
 	} else if (!(travels_positive)) {
 		//case where line collides obstacles from above
 		_s.end.y = this->y_max();
-		cout << "line collides obstacles from above" << endl;
+		//cout << "line collides obstacles from above" << endl;
 
 		return 0;
 	} else {
