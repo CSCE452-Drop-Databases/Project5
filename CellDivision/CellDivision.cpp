@@ -5,6 +5,7 @@
 #include "Obstacle.h"
 #include "LineSegment.h"
 #include "Cell.h"
+#include <fstream>
 #include <GL/glut.h>
 
 using namespace std;
@@ -15,6 +16,8 @@ using namespace std;
 vector<Obstacle> obstacles;
 vector<LineSegment> cell_divisions;
 vector<Cell> cells;
+
+Point robot, origin, destination;
 
 void addGLVertex(Point _point) {
 	glVertex2i(_point.x, _point.y);
@@ -128,9 +131,30 @@ void init(void) {
 	glClearColor(1.0, 1.0, 1.0, 0.0);
 	gluOrtho2D(0, WINDOW_WIDTH - 1, 0, WINDOW_HEIGHT - 1);
 
-	obstacles.push_back(Obstacle(Point(30, 450), 200));
-	obstacles.push_back(Obstacle(Point(260, 300), 150));
-	obstacles.push_back(Obstacle(Point(300, 120), 100));
+	//obstacles.push_back(Obstacle(Point(30, 450), 200));
+	//obstacles.push_back(Obstacle(Point(260, 300), 150));
+	//obstacles.push_back(Obstacle(Point(300, 120), 100));
+
+	ifstream infile("configuration.txt");
+	int x, y;
+
+	infile >> x >> y;
+	robot = origin = Point(x, y);
+
+	infile >> x >> y;
+	destination = Point(x, y);
+
+	infile >> x >> y;
+	obstacles.push_back(Obstacle(Point(x, y), 200));
+
+	infile >> x >> y;
+	obstacles.push_back(Obstacle(Point(x, y), 150));
+
+	infile >> x >> y;
+	obstacles.push_back(Obstacle(Point(x, y), 100));
+
+	infile.close();
+
 
 	glClear(GL_COLOR_BUFFER_BIT);
 	glFlush();
@@ -143,7 +167,14 @@ void init(void) {
 void mouseMove(int x, int y) {
 	//This function is called continueously on drag
 	cout << "mouseMove called" << endl;
-	glutPostRedisplay();
+	//glutPostRedisplay();
+}
+
+void mouseClick(int button, int state, int x, int y) {
+	if (state == GLUT_UP) {
+
+		glutPostRedisplay();
+	}
 }
 
 int main(int argc, char *argv[])
@@ -156,6 +187,7 @@ int main(int argc, char *argv[])
 	init();
 	glutDisplayFunc(display);
 	glutMotionFunc(mouseMove);
+	glutMouseFunc(mouseClick);
 	glutKeyboardFunc(keyboard);
 	printf("OpenGL version: %s \n", glGetString(GL_VERSION));
 	glutMainLoop();
