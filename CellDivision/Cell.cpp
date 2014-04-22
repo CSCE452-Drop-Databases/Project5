@@ -68,7 +68,7 @@ bool Cell::isInside(Point _p) {
 }
 
 bool areTouching(Cell _a, Cell _b) {
-	//TODO implement
+	//TODO  not sure how this accounts for multiple stacked objects
 
 	if (_a.left_edge.get_x() + _a.size == _b.left_edge.get_x()) { // in adjacent columns
 		//if (_b.left_edge.y_max() <= _a.left_edge.y_max() && _b.left_edge.y_min() >= _) { // in adjacent rows
@@ -76,7 +76,6 @@ bool areTouching(Cell _a, Cell _b) {
 		//}
 	}
 
-	// TODO: Check if cells on top of each other
 
 	return false;
 }

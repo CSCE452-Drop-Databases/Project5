@@ -5,6 +5,7 @@
 #include "Obstacle.h"
 #include "LineSegment.h"
 #include "Cell.h"
+#include "Graph.h"
 #include <fstream>
 
 #include <GL/glut.h>
@@ -21,11 +22,12 @@ vector<Cell> cells;
 vector<int> mergeList;
 
 Point origin, destination;
+int startCell, endCell;
 
-struct Edge {
-	int dst; // destination cell
-};
-vector<vector<Edge> > graph;
+Graph *graph;
+vector<int> path;
+
+
 
 void addGLVertex(Point _point) {
 	glVertex2i(_point.x, _point.y);
@@ -141,14 +143,14 @@ void makeCells() {
 
 	int itn = 0;
 	while (mergeCells()) {
-		cout << "MERGE: Iteration: " << itn << endl;
-		cout << '\t' << "Cell Count: " << cells.size() << endl;
+		//cout << "MERGE: Iteration: " << itn << endl;
+		//cout << '\t' << "Cell Count: " << cells.size() << endl;
 		vector<bool> skipList(mergeList.size(), false);
 		vector<Cell> newCells;
 		for (int i = 0; i < mergeList.size(); ++i) {
 			if (mergeList[i] != -1 && !skipList[i]) {
 				// need to merge
-				cout << "MERGE: merging " << i << " and " << mergeList[i] << endl;
+				//cout << "MERGE: merging " << i << " and " << mergeList[i] << endl;
 				skipList[mergeList[i]] = true;
 				int curCellI = i;
 				Cell *curCell = &cells[i];
@@ -182,6 +184,9 @@ void makeCells() {
 	}
 }
 
+
+
+
 void display(void) {
 	//draw stuff
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -197,14 +202,10 @@ void display(void) {
 		drawObstacle(obstacles[i]);
 	}
 	for (int i = 0; i < cell_divisions.size(); i++) {
-		cout << cell_divisions[i] << endl;
+		//cout << cell_divisions[i] << endl;
 		drawSegment(cell_divisions[i]);
 	}
 
-	cout << "---------------------" << endl;
-	cout << cells[3].left_edge << endl;
-	cout << cells[5].left_edge << endl;
-	cout << cells[4].left_edge << endl;
 
 	colorCell(cells[6]);
 	//colorCell(cells[4]);
@@ -261,37 +262,67 @@ void init(void) {
 	makeDivisions();
 	makeCells();
 
-	graph = vector<vector<Edge> >(cells.size());
 
+
+	vector<Vertex*> vertList;
+	vector<Edge*> edgeList;
+
+	for (int i = 0; i < cells.size(); ++i) { // push all vertices into the vertex vector before assigning the in and out list
+		Vertex *vert = new Vertex(i + 1);
+		vertList.push_back(vert);
+	}
+
+
+
+	vector<vector<int> > tempGraph(cells.size());
 	for (int i = 0; i < cells.size(); ++i) {
-		for (int j = i + 1; j < cells.size(); ++j) {
+		for (int j = 0; j < cells.size(); ++j) {
+			if (i == j) continue;
 			bool touching = areTouching(cells[i], cells[j]);
-			cout << "Cells " << i << " and " << j << " are ";
-			if (!touching) cout << "NOT ";
-			cout << " touching" << endl;
+			//cout << "Cells " << i << " and " << j << " are ";
+			//if (!touching) cout << "NOT ";
+			//cout << " touching" << endl;
 
 			if (touching) {
-				Edge tempEdge;
-				tempEdge.dst = j;
-				graph[i].push_back(tempEdge);
+				//Edge tempEdge;
+				//tempEdge.dst = j;
+				tempGraph[i].push_back(j);
+				//tempEdge.dst = i;
+				tempGraph[j].push_back(i);
 			}
 
 		}
 	}
 
-	for (int i = 0; i < graph.size(); ++i) {
-		cout << "Cell " << i << " Has edges going to cells: ";
-		for (int j = 0; j < graph[i].size(); ++j) {
-			cout << graph[i][j].dst << " ";
+
+	for (int i = 0; i < tempGraph.size(); ++i) {
+		for (int j = 0; j < tempGraph[i].size(); ++j) {
+			Edge *tempedge = new Edge(vertList[i], vertList[tempGraph[i][j]], 1); // new edge, weight 1
+			edgeList.push_back(tempedge);
+			vertList[i]->outList.push_back(tempedge);
+			vertList[tempGraph[i][j]]->inList.push_back(tempedge);
 		}
-		cout << endl;
 	}
+
+
+	graph = new Graph(vertList, edgeList);
+
+	for (int i = 0; i < cells.size(); ++i) {
+		if (cells[i].isInside(origin)) {
+			startCell = i;
+		}
+		if (cells[i].isInside(destination)) {
+			endCell = i;
+		}
+	}
+
+	path = graph->dijkstra(startCell+1, endCell+1);
 
 }
 
 void mouseMove(int x, int y) {
 	//This function is called continueously on drag
-	cout << "mouseMove called" << endl;
+	//cout << "mouseMove called" << endl;
 	//glutPostRedisplay();
 }
 
