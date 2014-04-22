@@ -6,9 +6,12 @@
 
 class Cell {
 private:
+//	LineSegment left_edge;
+//	int size;
+public:
 	LineSegment left_edge;
 	int size;
-public:
+	
 	//default constructor
 	Cell();
 

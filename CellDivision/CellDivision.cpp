@@ -6,6 +6,7 @@
 #include "LineSegment.h"
 #include "Cell.h"
 #include <fstream>
+
 #include <GL/glut.h>
 
 using namespace std;
@@ -17,7 +18,14 @@ vector<Obstacle> obstacles;
 vector<LineSegment> cell_divisions;
 vector<Cell> cells;
 
-Point robot, origin, destination;
+vector<int> mergeList;
+
+Point origin, destination;
+
+struct Edge {
+	int dst; // destination cell
+};
+vector<vector<Edge> > graph;
 
 void addGLVertex(Point _point) {
 	glVertex2i(_point.x, _point.y);
@@ -30,7 +38,7 @@ void drawObstacle(Obstacle _obst) {
 		addGLVertex(_obst.locate_corner(i));
 	}
 	glEnd();
-	glFlush();
+	//glFlush();
 }
 
 void drawSegment(LineSegment _seg) {
@@ -39,7 +47,17 @@ void drawSegment(LineSegment _seg) {
 	addGLVertex(_seg.start);
 	addGLVertex(_seg.end);
 	glEnd();
-	glFlush();
+	//glFlush();
+}
+
+void colorCell(Cell c) {
+	glBegin(GL_POLYGON);
+	glColor3f(0.0f, 1.0f, 0.0f);
+	glVertex2f(c.left_edge.get_x(), c.left_edge.y_min());
+	glVertex2f(c.left_edge.get_x() + c.size, c.left_edge.y_min());
+	glVertex2f(c.left_edge.get_x() + c.size, c.left_edge.y_max());
+	glVertex2f(c.left_edge.get_x(), c.left_edge.y_max());
+	glEnd();
 }
 
 void makeDivisions() {
@@ -94,10 +112,71 @@ void makeDivisions() {
 
 }
 
+bool mergeCells() {
+	// for merging cells that are on top of each other
+
+	//vector<vector<int> > mergeList(cells.size());
+	mergeList = vector<int>(cells.size(), -1);
+	bool rValue = false;
+	for (int i = 0; i < cells.size(); ++i) {
+		for (int j = 0; j < cells.size(); ++j) {
+			if (i == j) continue; // not checking if should merge with self
+			if (cells[i].left_edge.get_x() == cells[j].left_edge.get_x() &&
+				cells[i].left_edge.y_min() == cells[j].left_edge.y_max() + 1) { // should merge
+				mergeList[i] = j;
+				rValue = true;
+				break; // only considering first merge
+			}
+		}
+	}
+
+	return rValue;
+}
+
 void makeCells() {
+	cells.push_back(Cell(LineSegment(Point(0, 0), Point(500, 500))));
 	for (int i = 0; i < cell_divisions.size(); i++) {
 		cells.push_back(Cell(cell_divisions[i]));
 	}
+
+	int itn = 0;
+	while (mergeCells()) {
+		cout << "MERGE: Iteration: " << itn << endl;
+		cout << '\t' << "Cell Count: " << cells.size() << endl;
+		vector<bool> skipList(mergeList.size(), false);
+		vector<Cell> newCells;
+		for (int i = 0; i < mergeList.size(); ++i) {
+			if (mergeList[i] != -1 && !skipList[i]) {
+				// need to merge
+				cout << "MERGE: merging " << i << " and " << mergeList[i] << endl;
+				skipList[mergeList[i]] = true;
+				int curCellI = i;
+				Cell *curCell = &cells[i];
+				Cell *nextCell = &cells[mergeList[i]];
+				Cell tempCell;
+
+					int leftX = curCell->left_edge.get_x();
+					int minY = min(curCell->left_edge.y_min(), nextCell->left_edge.y_min());
+					int maxY = max(curCell->left_edge.y_max(), nextCell->left_edge.y_max());
+					LineSegment tempLeftEdge(Point(leftX, minY), Point(leftX, maxY));
+					tempCell = Cell(tempLeftEdge);
+					curCell = &tempCell;
+					nextCell = &cells[mergeList[curCellI]];
+					curCellI = mergeList[curCellI];
+
+				newCells.push_back(tempCell);
+
+			}
+			else if (!skipList[i]) {
+				// no merge needed
+				newCells.push_back(cells[i]);
+			}
+		}
+
+		cells = newCells;
+		itn++;
+	}
+
 	for (int i = 0; i < cells.size(); i++) {
 		cells[i].calcSize(cell_divisions, obstacles, WINDOW_WIDTH);
 	}
@@ -106,6 +185,14 @@ void makeCells() {
 void display(void) {
 	//draw stuff
 	glClear(GL_COLOR_BUFFER_BIT);
+
+	//cout << "Robot: (" << robot.x << ", " << robot.y << ")" << endl;
+	glBegin(GL_POINTS);
+	glColor3f(1.0f, 0.0f, 0.0f);
+	addGLVertex(origin);
+	addGLVertex(destination);
+	glEnd();
+
 	for (int i = 0; i < obstacles.size(); i++) {
 		drawObstacle(obstacles[i]);
 	}
@@ -113,6 +200,17 @@ void display(void) {
 		cout << cell_divisions[i] << endl;
 		drawSegment(cell_divisions[i]);
 	}
+
+	cout << "---------------------" << endl;
+	cout << cells[3].left_edge << endl;
+	cout << cells[5].left_edge << endl;
+	cout << cells[4].left_edge << endl;
+
+	colorCell(cells[6]);
+	//colorCell(cells[4]);
+
+	glFlush();
+
 }
 
 void keyboard(unsigned char key, int x, int y) {
@@ -139,7 +237,7 @@ void init(void) {
 	int x, y;
 
 	infile >> x >> y;
-	robot = origin = Point(x, y);
+	origin = Point(x, y);
 
 	infile >> x >> y;
 	destination = Point(x, y);
@@ -156,12 +254,39 @@ void init(void) {
 	infile.close();
 
 
-	glClear(GL_COLOR_BUFFER_BIT);
-	glFlush();
+	//glClear(GL_COLOR_BUFFER_BIT);
+	//glFlush();
 	printf("Screen cleared.\n");
 
 	makeDivisions();
 	makeCells();
+
+	graph = vector<vector<Edge> >(cells.size());
+
+	for (int i = 0; i < cells.size(); ++i) {
+		for (int j = i + 1; j < cells.size(); ++j) {
+			bool touching = areTouching(cells[i], cells[j]);
+			cout << "Cells " << i << " and " << j << " are ";
+			if (!touching) cout << "NOT ";
+			cout << " touching" << endl;
+
+			if (touching) {
+				Edge tempEdge;
+				tempEdge.dst = j;
+				graph[i].push_back(tempEdge);
+			}
+
+		}
+	}
+
+	for (int i = 0; i < graph.size(); ++i) {
+		cout << "Cell " << i << " Has edges going to cells: ";
+		for (int j = 0; j < graph[i].size(); ++j) {
+			cout << graph[i][j].dst << " ";
+		}
+		cout << endl;
+	}
+
 }
 
 void mouseMove(int x, int y) {
