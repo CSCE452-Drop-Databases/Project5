@@ -55,3 +55,19 @@ vector<Point> Cell::get_points() {
 	}
 	return result_points;
 }
+
+bool Cell::isInside(Point _p) {
+	if ((_p.y <= left_edge.y_max())
+		&& (_p.y >= left_edge.y_min())
+		&& (_p.x >= left_edge.get_x())
+		&& (_p.x <= (left_edge.get_x() + size - 1))) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool areTouching(Cell _a, Cell _b) {
+	//TODO implement
+	return false;
+}
