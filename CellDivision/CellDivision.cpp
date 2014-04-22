@@ -26,7 +26,10 @@ int startCell, endCell;
 
 Graph *graph;
 vector<int> path;
+vector<Point> pathPoints;
 
+int curPlacement = 0;
+bool drawCellLines = false;
 
 
 void addGLVertex(Point _point) {
@@ -141,8 +144,7 @@ void makeCells() {
 		cells.push_back(Cell(cell_divisions[i]));
 	}
 
-	int itn = 0;
-	while (mergeCells()) {
+	while (true && mergeCells()) {
 		//cout << "MERGE: Iteration: " << itn << endl;
 		//cout << '\t' << "Cell Count: " << cells.size() << endl;
 		vector<bool> skipList(mergeList.size(), false);
@@ -157,14 +159,14 @@ void makeCells() {
 				Cell *nextCell = &cells[mergeList[i]];
 				Cell tempCell;
 
-					int leftX = curCell->left_edge.get_x();
-					int minY = min(curCell->left_edge.y_min(), nextCell->left_edge.y_min());
-					int maxY = max(curCell->left_edge.y_max(), nextCell->left_edge.y_max());
-					LineSegment tempLeftEdge(Point(leftX, minY), Point(leftX, maxY));
-					tempCell = Cell(tempLeftEdge);
-					curCell = &tempCell;
-					nextCell = &cells[mergeList[curCellI]];
-					curCellI = mergeList[curCellI];
+				int leftX = curCell->left_edge.get_x();
+				int minY = min(curCell->left_edge.y_min(), nextCell->left_edge.y_min());
+				int maxY = max(curCell->left_edge.y_max(), nextCell->left_edge.y_max());
+				LineSegment tempLeftEdge(Point(leftX, minY), Point(leftX, maxY));
+				tempCell = Cell(tempLeftEdge);
+				curCell = &tempCell;
+				nextCell = &cells[mergeList[curCellI]];
+				curCellI = mergeList[curCellI];
 
 				newCells.push_back(tempCell);
 
@@ -176,7 +178,6 @@ void makeCells() {
 		}
 
 		cells = newCells;
-		itn++;
 	}
 
 	for (int i = 0; i < cells.size(); i++) {
@@ -184,85 +185,125 @@ void makeCells() {
 	}
 }
 
+void makePathPoints() {
+	if (path.size() < 1) return;
+	pathPoints.push_back(origin);
+	Point curPos = origin;
+	for (int i = 1; i < path.size(); ++i) {
+		int x = cells[path[i]].left_edge.get_x();
+		//int y;
+		int maxY = cells[path[i]].left_edge.y_max();
+		int minY = cells[path[i]].left_edge.y_min();
+		int maxYl = cells[path[i-1]].left_edge.y_max();
+		int minYl = cells[path[i-1]].left_edge.y_min();
 
+		int yDif = destination.y - curPos.y;
+		int xDif = destination.x - curPos.x;
+		float m = ((float)yDif) / ((float)xDif);
+
+		// find intercept of line from curPos to destination with left edge of current cell
+		// y - curPosY = mx - m*curPosX
+		// y = m*x - m*curPos.x + curPos.y
+
+		int y = m * (float)x - m*(float)curPos.x + (float)curPos.y;
+
+		//cout << "INTERSECTION (cell " << path[i] << ") is at y = " << y << endl;
+
+		if (y < minYl) {
+			y = minYl;
+		}
+		else if (y > maxYl) {
+			y = maxYl;
+		}
+
+
+		if (y < minY) {
+			y = minY;
+		}
+		else if (y > maxY) {
+			y = maxY;
+		}
+
+		curPos = Point(x, y);
+
+		pathPoints.push_back(curPos);
+	}
+	pathPoints.push_back(destination);
+}
 
 
 void display(void) {
 	//draw stuff
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	//cout << "Robot: (" << robot.x << ", " << robot.y << ")" << endl;
-	glBegin(GL_POINTS);
-	glColor3f(1.0f, 0.0f, 0.0f);
-	addGLVertex(origin);
-	addGLVertex(destination);
-	glEnd();
-
 	for (int i = 0; i < obstacles.size(); i++) {
 		drawObstacle(obstacles[i]);
 	}
-	for (int i = 0; i < cell_divisions.size(); i++) {
-		//cout << cell_divisions[i] << endl;
-		drawSegment(cell_divisions[i]);
+
+	if (curPlacement >= 3) {
+		glBegin(GL_POINTS);
+		glColor3f(1.0f, 0.0f, 0.0f);
+		addGLVertex(origin);
+		glEnd();
 	}
 
+	if (curPlacement >= 4) {
+		if (drawCellLines) {
+			for (int i = 0; i < cell_divisions.size(); i++) {
+				//cout << cell_divisions[i] << endl;
+				drawSegment(cell_divisions[i]);
+			}
+		}
 
-	colorCell(cells[6]);
-	//colorCell(cells[4]);
+		cout << "Path Points size: " << pathPoints.size() << endl;
+		glBegin(GL_LINE_STRIP);
+		glColor3f(0.0f, 1.0f, 0.0f);
+		for (int i = 0; i < pathPoints.size(); ++i) {
+			addGLVertex(pathPoints[i]);
+		}
+		glEnd();
+	}
 
 	glFlush();
-
 }
 
 void keyboard(unsigned char key, int x, int y) {
 	switch (key) {
 	case '1':
-		//do stuff
-		break;
-	case '2':
-		//do other stuff
+		drawCellLines = !drawCellLines;
 		break;
 	}
 	glutPostRedisplay();
 }
 
-void init(void) {
-	glClearColor(1.0, 1.0, 1.0, 0.0);
-	gluOrtho2D(0, WINDOW_WIDTH - 1, 0, WINDOW_HEIGHT - 1);
-
+void initObstacles() {
 	//obstacles.push_back(Obstacle(Point(30, 450), 200));
 	//obstacles.push_back(Obstacle(Point(260, 300), 150));
 	//obstacles.push_back(Obstacle(Point(300, 120), 100));
 
-	ifstream infile("configuration.txt");
-	int x, y;
+	//ifstream infile("configuration.txt");
+	//int x, y;
 
-	infile >> x >> y;
-	origin = Point(x, y);
+	//infile >> x >> y;
+	//origin = Point(x, y);
 
-	infile >> x >> y;
-	destination = Point(x, y);
+	//infile >> x >> y;
+	//destination = Point(x, y);
 
-	infile >> x >> y;
-	obstacles.push_back(Obstacle(Point(x, y), 200));
+	//infile >> x >> y;
+	//obstacles.push_back(Obstacle(Point(x, y), 200));
 
-	infile >> x >> y;
-	obstacles.push_back(Obstacle(Point(x, y), 150));
+	//infile >> x >> y;
+	//obstacles.push_back(Obstacle(Point(x, y), 150));
 
-	infile >> x >> y;
-	obstacles.push_back(Obstacle(Point(x, y), 100));
+	//infile >> x >> y;
+	//obstacles.push_back(Obstacle(Point(x, y), 100));
 
-	infile.close();
+	//infile.close();
 
-
-	//glClear(GL_COLOR_BUFFER_BIT);
-	//glFlush();
-	printf("Screen cleared.\n");
 
 	makeDivisions();
 	makeCells();
-
-
 
 	vector<Vertex*> vertList;
 	vector<Edge*> edgeList;
@@ -284,10 +325,7 @@ void init(void) {
 			//cout << " touching" << endl;
 
 			if (touching) {
-				//Edge tempEdge;
-				//tempEdge.dst = j;
 				tempGraph[i].push_back(j);
-				//tempEdge.dst = i;
 				tempGraph[j].push_back(i);
 			}
 
@@ -316,8 +354,15 @@ void init(void) {
 		}
 	}
 
-	path = graph->dijkstra(startCell+1, endCell+1);
+	path = graph->dijkstra(startCell + 1, endCell + 1);
 
+	makePathPoints();
+
+}
+
+void init(void) {
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	gluOrtho2D(0, WINDOW_WIDTH - 1, 0, WINDOW_HEIGHT - 1);
 }
 
 void mouseMove(int x, int y) {
@@ -328,7 +373,17 @@ void mouseMove(int x, int y) {
 
 void mouseClick(int button, int state, int x, int y) {
 	if (state == GLUT_UP) {
-
+		if (curPlacement > 4) return;
+		y = 500 - y;
+		if (curPlacement == 0) obstacles.push_back(Obstacle(Point(x, y), 200));
+		if (curPlacement == 1) obstacles.push_back(Obstacle(Point(x, y), 150));
+		if (curPlacement == 2) obstacles.push_back(Obstacle(Point(x, y), 100));
+		if (curPlacement == 3) origin = Point(x, y);
+		if (curPlacement == 4) {
+			destination = Point(x, y);
+			initObstacles();
+		}
+		curPlacement++;
 		glutPostRedisplay();
 	}
 }
